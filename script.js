@@ -37,6 +37,9 @@ const closeMemoBtn   = document.querySelector('.close-memo-btn');
 const logForm        = document.getElementById('log-form');
 const tableHeader    = document.getElementById('table-header');
 const tableBody      = document.getElementById('table-body');
+// --- 수정된 부분 시작 ---
+const tableFooter    = document.getElementById('table-footer');
+// --- 수정된 부분 끝 ---
 const nameSelect        = document.getElementById('name-select');
 const dateSelect        = document.getElementById('date-select');
 const startTimeHour     = document.getElementById('start-time-hour');
@@ -101,7 +104,7 @@ function resetFormToCreateMode() {
   durationSpan.textContent = "0h 0m (0분)";
 }
 
-// 6) 이벤트
+// 6) 이벤트 (변경 없음)
 function bindEvents() {
   openPopupBtn.addEventListener('click', () => {
     const password = prompt('암호를 입력하세요:');
@@ -111,9 +114,8 @@ function bindEvents() {
     } else if (password !== null) { alert('암호가 틀렸습니다.'); }
   });
 
-  // --- 수정된 부분 시작 ---
   editModeBtn.addEventListener('click', () => {
-    if (!isEditMode) { // 수정 모드로 진입 시
+    if (!isEditMode) {
       const password = prompt('암호를 입력하세요:');
       if (password === 'surgery123') {
         isEditMode = true;
@@ -123,14 +125,13 @@ function bindEvents() {
       } else if (password !== null) {
         alert('암호가 틀렸습니다.');
       }
-    } else { // 수정 모드 종료 시
+    } else {
       isEditMode = false;
       container.classList.remove('edit-mode-on');
       editModeBtn.classList.remove('active');
       editModeBtn.textContent = '기록 수정';
     }
   });
-  // --- 수정된 부분 끝 ---
 
   const closePopups = () => {
     inputPopup.style.display = 'none';
@@ -164,11 +165,9 @@ function bindEvents() {
     const start = parseInt(startTimeHour.value) * 60 + parseInt(startTimeMinute.value);
     const end = parseInt(endTimeHour.value) * 60 + parseInt(endTimeMinute.value);
     if (start > end) return alert("마감 시간이 시작 시간보다 빠를 수 없습니다.");
-
     const durationInMinutes = end - start;
     const hours = Math.floor(durationInMinutes / 60);
     const minutes = durationInMinutes % 60;
-
     const record = {
       name: nameSelect.value,
       date: dateSelect.value,
@@ -178,12 +177,10 @@ function bindEvents() {
       durationInMinutes,
       memo: memoTextarea.value || '내용 없음',
     };
-
     const docId = editingDocIdInput.value;
     try {
       if (docId) { 
-        const docRef = doc(db, "logs", docId);
-        await updateDoc(docRef, record);
+        await updateDoc(doc(db, "logs", docId), record);
       } else { 
         record.timestamp = serverTimestamp();
         record.uid = (auth && auth.currentUser) ? auth.currentUser.uid : null;
@@ -200,15 +197,11 @@ function bindEvents() {
   tableBody.addEventListener('click', (e) => {
     const td = e.target.closest('td');
     if (!td) return;
-    
     if (isEditMode) {
       const docIds = td.dataset.docIds ? JSON.parse(td.dataset.docIds) : [];
       if (docIds.length === 0) return;
-      if (docIds.length === 1) {
-        openEditPopup(docIds[0]);
-      } else {
-        showEditSelectionPopup(docIds);
-      }
+      if (docIds.length === 1) { openEditPopup(docIds[0]); } 
+      else { showEditSelectionPopup(docIds); }
     } else {
       if (td.dataset.memo) {
         memoContentP.textContent = td.dataset.memo;
@@ -235,7 +228,6 @@ function bindEvents() {
 function showEditSelectionPopup(docIds) {
   selectEditList.innerHTML = '';
   const logsToShow = allLogs.filter(log => docIds.includes(log.id));
-  
   logsToShow.forEach(log => {
     const item = document.createElement('div');
     item.className = 'select-item';
@@ -252,22 +244,18 @@ function showEditSelectionPopup(docIds) {
 function openEditPopup(docId) {
   const log = allLogs.find(l => l.id === docId);
   if (!log) return;
-
   popupTitle.textContent = '참관 기록 수정';
   submitBtn.textContent = '수정';
   deleteBtn.style.display = 'block';
-  
   editingDocIdInput.value = docId;
   nameSelect.value = log.name;
   dateSelect.value = log.date;
   [startTimeHour.value, startTimeMinute.value] = log.startTime.split(':');
   [endTimeHour.value, endTimeMinute.value] = log.endTime.split(':');
   memoTextarea.value = log.memo;
-  
   calculateDuration();
   inputPopup.style.display = 'block';
 }
-
 
 // 7) 실시간 반영
 function listenForUpdates() {
@@ -277,6 +265,9 @@ function listenForUpdates() {
     snap.forEach(doc => allLogs.push({ id: doc.id, ...doc.data() }));
     updateTable(allLogs);
     updateRanking(allLogs);
+    // --- 수정된 부분 시작 ---
+    updateTotals(); // 합계 업데이트 함수 호출
+    // --- 수정된 부분 끝 ---
   });
 }
 
@@ -291,23 +282,44 @@ function updateTable(logs) {
   logs.forEach(log => {
     const cell = document.querySelector(`td[data-name="${log.name}"][data-date="${log.date}"]`);
     if (!cell) return;
-
     const current = cell.dataset.totalMinutes ? parseInt(cell.dataset.totalMinutes) : 0;
     const add = Number.isFinite(log.durationInMinutes) ? log.durationInMinutes : 0;
     const newTotal = current + add;
     const h = Math.floor(newTotal/60), m = newTotal%60;
     cell.textContent = `${h}h ${m}m`;
     cell.dataset.totalMinutes = newTotal;
-
     const existingMemo = cell.dataset.memo ? (cell.dataset.memo + '\n---\n') : '';
     const memoLine = `[${log.startTime}~${log.endTime}] ${log.memo || ''}`;
     cell.dataset.memo = existingMemo + memoLine;
-    
     const existingIds = cell.dataset.docIds ? JSON.parse(cell.dataset.docIds) : [];
     existingIds.push(log.id);
     cell.dataset.docIds = JSON.stringify(existingIds);
   });
 }
+
+// --- 수정된 부분 시작: 합계 계산 및 표시 함수 ---
+function updateTotals() {
+  let totalRowHtml = '<tr><td class="date-col">Total</td>';
+  
+  names.forEach(name => {
+    const cells = document.querySelectorAll(`td[data-name="${name}"]`);
+    let totalMinutesPerPerson = 0;
+    cells.forEach(cell => {
+      const minutes = parseInt(cell.dataset.totalMinutes, 10);
+      if (!isNaN(minutes)) {
+        totalMinutesPerPerson += minutes;
+      }
+    });
+
+    const h = Math.floor(totalMinutesPerPerson / 60);
+    const m = totalMinutesPerPerson % 60;
+    totalRowHtml += `<td>${h}h ${m}m</td>`;
+  });
+
+  totalRowHtml += '</tr>';
+  tableFooter.innerHTML = totalRowHtml;
+}
+// --- 수정된 부분 끝 ---
 
 function updateRanking(logs) {
   const rankingData = {};

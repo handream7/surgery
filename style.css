@@ -22,7 +22,6 @@ h1, h2 {
     text-align: center;
 }
 
-/* --- 수정된 부분 시작 --- */
 .controls {
     display: flex;
     justify-content: center;
@@ -56,7 +55,6 @@ h1, h2 {
 #edit-mode-btn.active {
     background-color: #e74c3c;
 }
-/* --- 수정된 부분 끝 --- */
 
 
 .table-container {
@@ -99,8 +97,16 @@ h1, h2 {
     cursor: default;
 }
 
+/* --- 수정된 부분 시작 --- */
+#log-table tfoot td {
+    font-weight: 700;
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    font-size: 14px;
+    border-top: 2px solid #bdc3c7;
+}
+/* --- 수정된 부분 끝 --- */
 
-/* --- 수정된 부분: 수정 모드 스타일 --- */
 .edit-mode-on #log-table td[data-doc-ids] {
     background-color: #fffbe6;
     cursor: pointer;
@@ -109,7 +115,6 @@ h1, h2 {
     background-color: #fff2cc;
     font-weight: bold;
 }
-/* --- 수정된 부분 끝 --- */
 
 
 .popup {
@@ -206,7 +211,6 @@ h1, h2 {
     text-align: center;
 }
 
-/* --- 수정된 부분 시작 --- */
 .form-buttons {
     display: flex;
     gap: 10px;
@@ -219,14 +223,14 @@ h1, h2 {
     font-size: 16px;
     cursor: pointer;
     border: none;
-    flex-grow: 1; /* 남는 공간을 모두 차지 */
+    flex-grow: 1;
 }
 #submit-btn:hover {
     background-color: #27ae60;
 }
 
 #delete-btn {
-    display: none; /* 평소에는 숨김 */
+    display: none;
     background-color: #e74c3c;
     color: white;
     font-size: 16px;
@@ -251,7 +255,6 @@ h1, h2 {
 #select-edit-list .select-item:hover {
     background-color: #f0f0f0;
 }
-/* --- 수정된 부분 끝 --- */
 
 .ranking-container {
     padding: 20px;
@@ -290,6 +293,10 @@ h1, h2 {
         white-space: nowrap;
     }
     #log-table th { font-size: 13px; }
+    /* --- 수정된 부분: 모바일 Total 행 글자 크기 --- */
+    #log-table tfoot td {
+        font-size: 13px;
+    }
     .popup-content {
         width: 90%;
         margin: 15% auto;
