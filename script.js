@@ -26,7 +26,7 @@ try { getAnalytics(app); } catch (_) {}
 
 // 3) DOM 요소
 const names = ["강민성", "김아형", "노현영", "이승현", "장유정", "진한별", "조휘규", "홍은비"].sort();
-const dates = ["09-29(월)", "09-30(화)", "10-01(수)", "10-02(목)", "10-06(월)", "10-07(화)", "10-08(수)", "10-09(목)", "10-10(금)"];
+const dates = ["09-29(월)", "09-30(화)", "10-01(수)", "10-02(목)", "10-13(월)", "10-14(화)", "10-15(수)", "10-16(목)", "10-17(금)"];
 
 const container      = document.querySelector('.container');
 const openPopupBtn   = document.getElementById('open-popup-btn');
