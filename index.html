@@ -1,77 +1,93 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수술 참관 기록표</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>수술 참관 기록표</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>수술 참관 기록표 🩺</h1>
-        <button id="open-popup-btn">기록 입력</button>
-        <div class="table-container">
-            <table id="log-table">
-                <thead>
-                    <tr id="table-header"></tr>
-                </thead>
-                <tbody id="table-body"></tbody>
-            </table>
-        </div>
-        <div class="ranking-container">
-            <h2>🏆 참관 시간 랭킹</h2>
-            <canvas id="ranking-chart"></canvas>
-        </div>
+  <div class="container">
+    <h1>수술 참관 기록표 🩺</h1>
+    <div class="controls">
+      <button id="open-popup-btn">기록 입력</button>
+      <button id="edit-mode-btn">기록 수정</button>
+    </div>
+    <div class="table-container">
+      <table id="log-table">
+        <thead><tr id="table-header"></tr></thead>
+        <tbody id="table-body"></tbody>
+      </table>
     </div>
 
-    <div id="input-popup" class="popup">
-        <div class="popup-content">
-            <span class="close-btn">&times;</span>
-            <h2>참관 기록 입력</h2>
-            <form id="log-form">
-                <label for="name-select">이름:</label>
-                <select id="name-select" required></select>
-
-                <label for="date-select">날짜:</label>
-                <select id="date-select" required></select>
-
-                <div class="time-select">
-                    <div>
-                        <label for="start-time-hour">시작 시간:</label>
-                        <select id="start-time-hour"></select> 시
-                        <select id="start-time-minute"></select> 분
-                    </div>
-                    <div>
-                        <label for="end-time-hour">마감 시간:</label>
-                        <select id="end-time-hour"></select> 시
-                        <select id="end-time-minute"></select> 분
-                    </div>
-                </div>
-
-                <div class="duration-display">
-                    <strong>총 참관 시간:</strong> <span id="duration">0시간 0분 (0분)</span>
-                </div>
-
-                <label for="memo">메모 (수술명, 교수님 등):</label>
-                <textarea id="memo" rows="4"></textarea>
-
-                <button type="submit">확인</button>
-            </form>
-        </div>
+    <div class="ranking-container">
+      <h2>🏆 참관 시간 랭킹</h2>
+      <canvas id="ranking-chart"></canvas>
     </div>
+  </div>
 
-    <div id="memo-popup" class="popup">
-        <div class="popup-content">
-            <span class="close-memo-btn">&times;</span>
-            <h2>메모 내용</h2>
-            <p id="memo-content"></p>
+  <div id="input-popup" class="popup">
+    <div class="popup-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="popup-title">참관 기록 입력</h2>
+      <form id="log-form">
+        <input type="hidden" id="editing-doc-id">
+
+        <label for="name-select">이름:</label>
+        <select id="name-select" required></select>
+
+        <label for="date-select">날짜:</label>
+        <select id="date-select" required></select>
+
+        <div class="time-select">
+          <div class="time-input-group">
+            <label for="start-time-hour">시작 시간:</label>
+            <select id="start-time-hour"></select> 시
+            <select id="start-time-minute"></select> 분
+            <button type="button" id="start-now-btn" class="now-btn">Now</button>
+          </div>
+          <div class="time-input-group">
+            <label for="end-time-hour">마감 시간:</label>
+            <select id="end-time-hour"></select> 시
+            <select id="end-time-minute"></select> 분
+            <button type="button" id="end-now-btn" class="now-btn">Now</button>
+          </div>
         </div>
-    </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="script.js"></script>
+        <div class="duration-display">
+          <strong>총 참관 시간:</strong>
+          <span id="duration">0h 0m (0분)</span>
+        </div>
+
+        <label for="memo">메모 (수술명, 교수님 등):</label>
+        <textarea id="memo" rows="4"></textarea>
+
+        <div class="form-buttons">
+          <button type="submit" id="submit-btn">확인</button>
+          <button type="button" id="delete-btn">삭제</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="memo-popup" class="popup">
+    <div class="popup-content">
+      <span class="close-memo-btn">&times;</span>
+      <h2>메모 내용</h2>
+      <p id="memo-content"></p>
+    </div>
+  </div>
+
+  <div id="select-edit-popup" class="popup">
+    <div class="popup-content">
+      <span class="close-select-edit-btn">&times;</span>
+      <h2>수정할 기록 선택</h2>
+      <div id="select-edit-list"></div>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
 </body>
 </html>
