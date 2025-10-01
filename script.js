@@ -37,9 +37,7 @@ const closeMemoBtn   = document.querySelector('.close-memo-btn');
 const logForm        = document.getElementById('log-form');
 const tableHeader    = document.getElementById('table-header');
 const tableBody      = document.getElementById('table-body');
-// --- 수정된 부분 시작 ---
 const tableFooter    = document.getElementById('table-footer');
-// --- 수정된 부분 끝 ---
 const nameSelect        = document.getElementById('name-select');
 const dateSelect        = document.getElementById('date-select');
 const startTimeHour     = document.getElementById('start-time-hour');
@@ -65,9 +63,8 @@ let auth;
 let rankingChart;
 let allLogs = [];
 let isEditMode = false;
+let updateTimer; 
 
-
-// 4) 유틸 & 5) 화면 초기화 (변경 없음)
 function populateSelect(sel, options) { sel.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join(''); }
 function calculateDuration() {
   const start = parseInt(startTimeHour.value)*60 + parseInt(startTimeMinute.value);
@@ -104,7 +101,67 @@ function resetFormToCreateMode() {
   durationSpan.textContent = "0h 0m (0분)";
 }
 
-// 6) 이벤트 (변경 없음)
+function initChart() {
+    const ctx = document.getElementById('ranking-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const dataLabelsPlugin = (window && window.ChartDataLabels) ? window.ChartDataLabels : undefined;
+    rankingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: '총 참관 시간 (분)',
+                data: [],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.5)','rgba(54, 162, 235, 0.5)', 'rgba(255, 206, 86, 0.5)','rgba(75, 192, 192, 0.5)',
+                    'rgba(153, 102, 255, 0.5)','rgba(255, 159, 64, 0.5)', 'rgba(99, 255, 132, 0.5)', 'rgba(201, 203, 207, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)','rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)','rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)','rgba(255, 159, 64, 1)', 'rgba(99, 255, 132, 1)', 'rgba(201, 203, 207, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: dataLabelsPlugin ? {
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: (v) => {
+                        if (!v) return '';
+                        const h = Math.floor(v/60), m = v%60;
+                        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+                    },
+                    color: '#555',
+                    font: { weight: 'bold' }
+                } : {}
+            },
+            scales: { 
+                x: { beginAtZero: true, title: { display: true, text: '시간 (분)' } } 
+            },
+            // --- 수정된 부분 시작 ---
+            animation: {
+                x: { // X축(너비)에 대한 애니메이션만 설정
+                    easing: 'easeInOutQuad',
+                    duration: 2500, // 2.5초 동안
+                    from: 0 // 0에서부터 시작하도록 명시
+                },
+                y: { // Y축(세로 위치)에 대한 애니메이션은 사용 안 함
+                    duration: 0
+                }
+            }
+            // --- 수정된 부분 끝 ---
+        },
+        plugins: dataLabelsPlugin ? [dataLabelsPlugin] : []
+    });
+}
+
 function bindEvents() {
   openPopupBtn.addEventListener('click', () => {
     const password = prompt('암호를 입력하세요:');
@@ -257,17 +314,18 @@ function openEditPopup(docId) {
   inputPopup.style.display = 'block';
 }
 
-// 7) 실시간 반영
 function listenForUpdates() {
   const qLogs = query(collection(db, "logs"), orderBy("timestamp", "desc"));
   onSnapshot(qLogs, (snap) => {
-    allLogs = [];
-    snap.forEach(doc => allLogs.push({ id: doc.id, ...doc.data() }));
-    updateTable(allLogs);
-    updateRanking(allLogs);
-    // --- 수정된 부분 시작 ---
-    updateTotals(); // 합계 업데이트 함수 호출
-    // --- 수정된 부분 끝 ---
+    clearTimeout(updateTimer);
+    updateTimer = setTimeout(() => {
+        allLogs = [];
+        snap.forEach(doc => allLogs.push({ id: doc.id, ...doc.data() }));
+        
+        updateTable(allLogs);
+        updateRanking(allLogs);
+        updateTotals();
+    }, 150);
   });
 }
 
@@ -297,7 +355,6 @@ function updateTable(logs) {
   });
 }
 
-// --- 수정된 부분 시작: 합계 계산 및 표시 함수 ---
 function updateTotals() {
   let totalRowHtml = '<tr><td class="date-col">Total</td>';
   
@@ -319,74 +376,34 @@ function updateTotals() {
   totalRowHtml += '</tr>';
   tableFooter.innerHTML = totalRowHtml;
 }
-// --- 수정된 부분 끝 ---
 
 function updateRanking(logs) {
-  const rankingData = {};
-  names.forEach(n => rankingData[n] = 0);
-  logs.forEach(l => {
-    if (rankingData.hasOwnProperty(l.name)) {
-      rankingData[l.name] += (Number.isFinite(l.durationInMinutes) ? l.durationInMinutes : 0);
-    }
-  });
+    if (!rankingChart) return;
 
-  const sorted = Object.entries(rankingData).sort(([,a],[,b]) => b - a);
-  const labels = sorted.map(([n]) => n);
-  const data   = sorted.map(([,v]) => v);
-  const ctx = document.getElementById('ranking-chart')?.getContext('2d');
-  if (!ctx) return;
-  if (rankingChart) rankingChart.destroy();
-  const dataLabelsPlugin = (window && window.ChartDataLabels) ? window.ChartDataLabels : undefined;
-  rankingChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{
-        label: '총 참관 시간 (분)',
-        data,
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.5)','rgba(54, 162, 235, 0.5)', 'rgba(255, 206, 86, 0.5)','rgba(75, 192, 192, 0.5)',
-          'rgba(153, 102, 255, 0.5)','rgba(255, 159, 64, 0.5)', 'rgba(99, 255, 132, 0.5)', 'rgba(201, 203, 207, 0.5)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)','rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)','rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)','rgba(255, 159, 64, 1)', 'rgba(99, 255, 132, 1)', 'rgba(201, 203, 207, 1)'
-        ],
-        borderWidth: 1
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        datalabels: dataLabelsPlugin ? {
-          anchor: 'end',
-          align: 'end',
-          formatter: (v) => {
-            if (!v) return '';
-            const h = Math.floor(v/60), m = v%60;
-            return h > 0 ? `${h}h ${m}m` : `${m}m`;
-          },
-          color: '#555',
-          font: { weight: 'bold' }
-        } : {}
-      },
-      scales: { x: { beginAtZero: true, title: { display: true, text: '시간 (분)' } } },
-      animation: { duration: 1000, easing: 'easeInOutQuad' }
-    },
-    plugins: dataLabelsPlugin ? [dataLabelsPlugin] : []
-  });
+    const rankingData = {};
+    names.forEach(n => rankingData[n] = 0);
+    logs.forEach(l => {
+        if (rankingData.hasOwnProperty(l.name)) {
+            rankingData[l.name] += (Number.isFinite(l.durationInMinutes) ? l.durationInMinutes : 0);
+        }
+    });
+
+    const sorted = Object.entries(rankingData).sort(([,a],[,b]) => b - a);
+    
+    rankingChart.data.labels = sorted.map(([n]) => n);
+    rankingChart.data.datasets[0].data = sorted.map(([,v]) => v);
+    
+    rankingChart.update();
 }
 
-// 8) 안전한 시작
 async function start() {
   try {
     auth = (await import("https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js")).getAuth(app);
     try { await signInAnonymously(auth); } catch (e) { console.warn('익명 로그인 실패(계속 진행):', e); }
   } catch (e) { console.warn('Auth 로드 실패(계속 진행):', e); }
+  
   initStaticTable();
+  initChart();
   bindEvents();
   listenForUpdates();
 }

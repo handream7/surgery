@@ -97,7 +97,6 @@ h1, h2 {
     cursor: default;
 }
 
-/* --- 수정된 부분 시작 --- */
 #log-table tfoot td {
     font-weight: 700;
     background-color: #ecf0f1;
@@ -105,7 +104,6 @@ h1, h2 {
     font-size: 14px;
     border-top: 2px solid #bdc3c7;
 }
-/* --- 수정된 부분 끝 --- */
 
 .edit-mode-on #log-table td[data-doc-ids] {
     background-color: #fffbe6;
@@ -293,7 +291,6 @@ h1, h2 {
         white-space: nowrap;
     }
     #log-table th { font-size: 13px; }
-    /* --- 수정된 부분: 모바일 Total 행 글자 크기 --- */
     #log-table tfoot td {
         font-size: 13px;
     }
